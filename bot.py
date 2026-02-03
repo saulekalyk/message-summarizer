@@ -13,8 +13,8 @@ load_dotenv(dotenv_path=env_path)
 TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
-print("OPENAI_API_KEY =", OPENAI_API_KEY)
-print("TOKEN =", TOKEN)
+# print("OPENAI_API_KEY =", OPENAI_API_KEY)
+# print("TOKEN =", TOKEN)
 
 client = AsyncOpenAI(api_key=OPENAI_API_KEY)
 
@@ -31,10 +31,12 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not text:
         return
 
-    buffers.setdefault(chat_id, []).append(text)
+    display_name = (update.effective_user.full_name or update.effective_user.first_name or "Пользователь").strip()
+    buffers.setdefault(chat_id, []).append(f"{display_name}: {text.strip()}")
 
     if len(buffers[chat_id]) > MAX_BUFFER:
         buffers[chat_id].pop(0)
+
 
    
 
@@ -53,18 +55,87 @@ async def sum_messages(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         
         combined_text = "\n".join(selected_messages)
 
+        messages=[
+            {
+                "role": "system", 
+                "content": (
+                    "Ты — помощник, который читает сообщения из Telegram-чата "
+                    "и пересказывает, что в нём происходило."
+                )
+            },
+            {
+                "role": "user", 
+                "content": (
+                    "Тебе пришлют сообщения из чата."
+                    "Каждое ссообщение имеет формат: 'Имя: текст сообщения'. "
+                )
+            },
+            {
+                "role": "user", 
+                "content": (
+                    "Твоя задача - написать связный текст, как небольшой рассказ,"
+                    "о том, что обсуждалось в чате."
+                )
+            },
+            {
+                "role": "user", 
+                "content": (
+                    "Ты должене упомянуть каждого человека по ИМЕНИ"
+                    "(имя указано в начале сообщения до двоеточия)."
+                )
+            },
+            {
+                "role": "user", 
+                "content": (
+                    "Описывая каждого человека, используй формулировки вида:\n"
+                    "— «Имя сказал(а), что …»\n"
+                    "— «Имя говорил(а) о том, что …»\n\n"
+                    "Глагол подбирай по контексту и по звучанию фразы. "
+                    "Не используй формат 'Имя: ...'."
+                )
+            },
+            {
+                "role": "user", 
+                "content": (
+                    "После слов «сказал(а) / говорил(а) о том, что» "
+                    "кратко опиши суть сообщений этого человека, "
+                    "не повторяя текст дословно."
+                )
+            },
+            {
+                "role": "user", 
+                "content": (
+                    "Не выдумывай факты и не добавляй того, чего нет в сообщениях. "
+                    "Не используй @username и технические никнеймы."
+                )
+            },
+            {
+                "role": "user", 
+                "content": (
+                    "Не используй списки, пункты или маркировку. "
+                    "Ответ должен быть обычным связным текстом."
+                )
+            },
+            {
+                "role": "user", 
+                "content": {
+                    "В конце добавь одно краткое предложение "
+                    "про общую атмосферу чата(например активная, веселая, деловая и т.д.),"
+                    "если это ощущается по сообщениям."
+                }
+            },
+            {
+                "role": "system",
+                "content": combined_text
+            }
+        ]
+    
         response = await client.chat.completions.create(
             model="gpt-4o-mini",
-            messages=[
-                {"role": "system", "content": (
-                    "Ты — помощник, который суммирует текстовые сообщения.\n"
-                    "Сделай краткое резюме по ключевым идеям.\n"
-                    "не повторяя каждое сообщение полностью."
-                )},
-                {"role": "user", "content": combined_text}
-            ],
-            max_tokens=200
+            messages=messages,
+            max_tokens=300
         )
+  
 
         summary = response.choices[0].message.content
         await update.message.reply_text(summary)
@@ -98,7 +169,6 @@ def main():
     app.add_handler(CommandHandler("sum", sum_messages))
     app.add_handler(CommandHandler("debug", debug))
     app.add_handler(CommandHandler("clear", clear_buffer))
-
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
 
 

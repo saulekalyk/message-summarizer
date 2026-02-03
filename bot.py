@@ -14,9 +14,6 @@ load_dotenv(dotenv_path=env_path)
 TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
-# print("OPENAI_API_KEY =", OPENAI_API_KEY)
-# print("TOKEN =", TOKEN)
-
 client = AsyncOpenAI(api_key=OPENAI_API_KEY)
 
 buffers: dict[int, list[str]] = {}
@@ -76,7 +73,14 @@ def get_display_name(user) -> str:
     return (user.full_name or user.first_name or "Пользователь").strip()
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    await update.message.reply_text('Привет! Напиши сообщения, потом используй /sum N для краткого резюме.')
+    await update.message.reply_text(
+        "Привет! Я помогу кратко суммировать переписку.\n\n"
+        "Что я умею:\n"
+        "• /nickname — установить или изменить свой ник\n"
+        "• /nickoff — убрать ник\n"
+        "• /sum N — сделать краткое резюме последних N сообщений\n\n"
+        "Просто пиши сообщения в чат, а когда понадобится — вызови /sum."
+    )
 
 async def nickname_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user = update.effective_user
@@ -110,7 +114,7 @@ async def nickname_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         return
     
     set_nickname(telegram_id, raw)
-    await update.message.reply_text(f"Твой никнейм был установлен на: {raw}")
+    await update.message.reply_text(f"Твой никнейм был изменен на: {raw}")
 
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = update.effective_chat.id

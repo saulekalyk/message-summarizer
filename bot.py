@@ -192,6 +192,14 @@ async def sum_messages(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
             {
                 "role": "system", 
                 "content": (
+                    "Игнорируй второстепенные детали, "
+                    "выделяй лишь самые важные идеи, "
+                    "даже если говорящих много."
+                )
+            },
+            {
+                "role": "system", 
+                "content": (
                     "Не выдумывай факты и не добавляй того, чего нет в сообщениях. "
                     "Не используй @username и технические никнеймы."
                 )
@@ -220,7 +228,8 @@ async def sum_messages(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         response = await client.chat.completions.create(
             model="gpt-4o-mini",
             messages=messages,
-            max_tokens=300
+            max_tokens=200
+            temperature=0.7
         )
   
 

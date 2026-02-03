@@ -228,7 +228,7 @@ async def sum_messages(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         response = await client.chat.completions.create(
             model="gpt-4o-mini",
             messages=messages,
-            max_tokens=200
+            max_tokens=200,
             temperature=0.7
         )
   
